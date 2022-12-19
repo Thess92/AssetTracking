@@ -1,7 +1,7 @@
 ﻿using AssetTracking;
 using System.Linq;
 
-List<Asset> assets = new List<Asset>();
+MyDbContext Context = new MyDbContext();
 
 // Loop to gather inputs from user and save as objects and add to list 'assets'.
 while (true)
@@ -19,6 +19,8 @@ while (true)
 
     else if (type.ToLower().Trim() == "computer" || type.ToLower().Trim() == "phone")
     {
+        Asset asset = new Asset();
+
         Console.Write("Enter Brand: ");
         string brand = Console.ReadLine();
 
@@ -34,16 +36,16 @@ while (true)
         Console.Write("Enter Office (Sweden, Spain or USA): ");
         string country = Console.ReadLine();
 
-        // Saves as either a Phone object or a Computer object depending on the user input. 
-        if (type.ToLower().Trim() == "phone")
-        {
-            assets.Add(new Phone(type, brand, model, purchaseDate, price, country));
-        }
+        asset.Type = type;
+        asset.Brand = brand;
+        asset.Model = model;
+        asset.PurchaseDate = purchaseDate;
+        asset.Price = price;
+        asset.Country = country;
 
-        else
-        {
-            assets.Add(new Computer(type, brand, model, purchaseDate, price, country));
-        }
+        // Adds and saves the asset to the database.
+        Context.Add(asset);
+        Context.SaveChanges();
 
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("The asset was successfully added!");
@@ -61,7 +63,7 @@ Console.WriteLine();
 
 Console.WriteLine("Type".PadRight(10) 
     + "Brand".PadRight(10) 
-    + "Model".PadRight(10) 
+    + "Model".PadRight(15) 
     + "Office".PadRight(10)
     + "Purchase Date".PadRight(15) 
     + "Price in USD".PadRight(15)
@@ -70,42 +72,44 @@ Console.WriteLine("Type".PadRight(10)
 
 Console.WriteLine("----".PadRight(10)
     + "-----".PadRight(10)
-    + "-----".PadRight(10)
+    + "-----".PadRight(15)
     + "------".PadRight(10)
     + "-------------".PadRight(15)
     + "------------".PadRight(15)
     + "--------".PadRight(15)
     + "-----------------");
 
+// Creates a list of all assets in the database.
+List<Asset> assets = Context.Assets.ToList();
 // Creates a new sorted list by office and then purchase date.
 List<Asset> sortedAssets = assets.OrderBy(x => x.Country).ThenBy(x => x.PurchaseDate).ToList();
 
 // Goes through every object in the list and writes it to the console.
 // Depending on if the asset has expired/will expire within 3 or 6 months the text color changes.
-foreach (var asset in sortedAssets)
+foreach (var sortedAsset in sortedAssets)
 {
     DateTime threeMonthsBefore = DateTime.Now.AddYears(-3).AddMonths(3);
     DateTime sixMonthsBefore = DateTime.Now.AddYears(-3).AddMonths(6);
 
-    string currency = asset.CurrencyPerCountry(asset.Country.ToLower());
-    double localPrice = asset.ConvertedCurrency(asset.Country.ToLower(), asset.Price);
+    string currency = sortedAsset.CurrencyPerCountry(sortedAsset.Country.ToLower());
+    double localPrice = sortedAsset.ConvertedCurrency(sortedAsset.Country.ToLower(), sortedAsset.Price);
 
-    if (asset.PurchaseDate < sixMonthsBefore)
+    if (sortedAsset.PurchaseDate < sixMonthsBefore)
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
     }
 
-    if (asset.PurchaseDate < threeMonthsBefore)
+    if (sortedAsset.PurchaseDate < threeMonthsBefore)
     {
         Console.ForegroundColor = ConsoleColor.Red;
     }
 
-    Console.WriteLine(asset.Type.PadRight(10)
-        + asset.Brand.PadRight(10)
-        + asset.Model.PadRight(10)
-        + asset.Country.PadRight(10)
-        + asset.PurchaseDate.ToString("d").PadRight(15)
-        + asset.Price.ToString().PadRight(15)
+    Console.WriteLine(sortedAsset.Type.PadRight(10)
+        + sortedAsset.Brand.PadRight(10)
+        + sortedAsset.Model.PadRight(15)
+        + sortedAsset.Country.PadRight(10)
+        + sortedAsset.PurchaseDate.ToString("d").PadRight(15)
+        + sortedAsset.Price.ToString().PadRight(15)
         + currency.PadRight(15)
         + localPrice);
 
